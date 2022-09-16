@@ -23,7 +23,6 @@
 
 // clang-format off
 #include <Arduino.h>
-#include <Adafruit_Sensor.h>
 #include <Adafruit_I2CDevice.h>
 #include <Adafruit_SPIDevice.h>
 // clang-format on
@@ -81,36 +80,6 @@ typedef struct {
   int16_t dig_P8;  /**< dig_P8 cal register. */
   int16_t dig_P9;  /**< dig_P9 cal register. */
 } bmp280_calib_data;
-
-class Adafruit_BMP280;
-
-/** Adafruit Unified Sensor interface for temperature component of BMP280 */
-class Adafruit_BMP280_Temp : public Adafruit_Sensor {
-public:
-  /** @brief Create an Adafruit_Sensor compatible object for the temp sensor
-      @param parent A pointer to the BMP280 class */
-  Adafruit_BMP280_Temp(Adafruit_BMP280 *parent) { _theBMP280 = parent; }
-  bool getEvent(sensors_event_t *);
-  void getSensor(sensor_t *);
-
-private:
-  int _sensorID = 280;
-  Adafruit_BMP280 *_theBMP280 = NULL;
-};
-
-/** Adafruit Unified Sensor interface for pressure component of BMP280 */
-class Adafruit_BMP280_Pressure : public Adafruit_Sensor {
-public:
-  /** @brief Create an Adafruit_Sensor compatible object for the pressure sensor
-      @param parent A pointer to the BMP280 class */
-  Adafruit_BMP280_Pressure(Adafruit_BMP280 *parent) { _theBMP280 = parent; }
-  bool getEvent(sensors_event_t *);
-  void getSensor(sensor_t *);
-
-private:
-  int _sensorID = 0;
-  Adafruit_BMP280 *_theBMP280 = NULL;
-};
 
 /**
  * Driver for the Adafruit BMP280 barometric pressure sensor.
@@ -189,15 +158,16 @@ public:
   uint8_t getStatus(void);
   uint8_t sensorID(void);
 
+  bool readPressureAndTemperature(uint32_t &pressure, int16_t &temperature);
+  int16_t readTemperatureCentiDegrees();
+  uint32_t readPressureDeciPa();
+
   float readTemperature();
   float readPressure(void);
   float readAltitude(float seaLevelhPa = 1013.25);
   float seaLevelForAltitude(float altitude, float atmospheric);
   float waterBoilingPoint(float pressure);
   bool takeForcedMeasurement();
-
-  Adafruit_Sensor *getTemperatureSensor(void);
-  Adafruit_Sensor *getPressureSensor(void);
 
   void setSampling(sensor_mode mode = MODE_NORMAL,
                    sensor_sampling tempSampling = SAMPLING_X16,
@@ -209,9 +179,6 @@ private:
   TwoWire *_wire;                     /**< Wire object */
   Adafruit_I2CDevice *i2c_dev = NULL; ///< Pointer to I2C bus interface
   Adafruit_SPIDevice *spi_dev = NULL; ///< Pointer to SPI bus interface
-
-  Adafruit_BMP280_Temp *temp_sensor = NULL;
-  Adafruit_BMP280_Pressure *pressure_sensor = NULL;
 
   /** Encapsulates the config register */
   struct config {
@@ -244,6 +211,7 @@ private:
     unsigned int get() { return (osrs_t << 5) | (osrs_p << 2) | mode; }
   };
 
+  uint32_t readAndProcessPressure();
   void readCoefficients(void);
   uint8_t spixfer(uint8_t x);
   void write8(byte reg, byte value);
